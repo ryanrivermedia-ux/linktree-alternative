@@ -1,0 +1,10 @@
+{
+  "slug": "admin-dashboard",
+  "feature": "Admin dashboard for managing link portal content",
+  "researched": "2026-04-30",
+  "phases_complete": ["internal", "external", "summary"],
+  "internal_files": ["structure.md", "patterns.md", "dependencies.md", "errors.md", "findings.md"],
+  "external_files": ["best-practices.md", "libraries.md", "references.md", "sources.yaml", "findings.md"],
+  "key_blockers": ["static-export-must-be-removed", "no-auth", "no-db"],
+  "recommended_libs": ["@dnd-kit/core", "@dnd-kit/sortable", "iron-session", "zod", "drizzle-orm"]
+}

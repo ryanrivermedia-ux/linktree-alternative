@@ -1,0 +1,12 @@
+{
+  "slug": "admin-dashboard",
+  "number": "001",
+  "feature": "Admin dashboard for managing link portal content",
+  "stage": "ready",
+  "created": "2026-04-30",
+  "research_complete": true,
+  "plan_complete": true,
+  "approved": true,
+  "current_wave": null,
+  "waves_complete": []
+}

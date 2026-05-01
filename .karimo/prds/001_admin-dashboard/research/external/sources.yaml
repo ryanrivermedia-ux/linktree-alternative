@@ -1,0 +1,195 @@
+research_date: "2026-04-30"
+stack:
+  nextjs: "16.2.4"
+  react: "19.x"
+  tailwind: "4.x"
+  typescript: "5.x"
+
+sources:
+
+  # Drag-and-Drop
+  - id: dndkit-site
+    url: https://dndkit.com
+    topic: drag-and-drop
+    library: "@dnd-kit/core + @dnd-kit/sortable"
+    accessed: "2026-04-30"
+    notes: "Official site. Sortable preset, collision detection, sensors documented."
+
+  - id: dndkit-github
+    url: https://github.com/clauderic/dnd-kit
+    topic: drag-and-drop
+    library: "@dnd-kit/core"
+    accessed: "2026-04-30"
+    notes: "Latest release @dnd-kit/collision@0.4.0 (April 2026). React 19 useRef fix in @dnd-kit/react@0.4.0."
+
+  - id: dndkit-sortable-package
+    url: https://github.com/clauderic/dnd-kit/blob/master/packages/sortable/package.json
+    topic: drag-and-drop
+    library: "@dnd-kit/sortable"
+    version: "10.0.0"
+    peer_deps:
+      react: ">=16.8.0"
+      react-dom: ">=16.8.0"
+    accessed: "2026-04-30"
+
+  - id: hello-pangea-dnd
+    url: https://github.com/hello-pangea/dnd
+    topic: drag-and-drop
+    library: "@hello-pangea/dnd"
+    version: "18.0.1"
+    peer_deps:
+      react: "^18.0.0 || ^19.0.0"
+      react-dom: "^18.0.0 || ^19.0.0"
+    react19_compatible: true
+    accessed: "2026-04-30"
+    notes: "Community-maintained fork of react-beautiful-dnd. Separate React 18 and React 19 test suites."
+
+  - id: react-beautiful-dnd
+    url: https://github.com/atlassian/react-beautiful-dnd
+    topic: drag-and-drop
+    library: "react-beautiful-dnd"
+    version: "13.1.1"
+    status: DEPRECATED
+    archived: "2025-08-18"
+    react19_compatible: false
+    accessed: "2026-04-30"
+
+  - id: pragmatic-dnd
+    url: https://github.com/atlassian/pragmatic-drag-and-drop
+    topic: drag-and-drop
+    library: "@atlaskit/pragmatic-drag-and-drop"
+    core_size_kb: 4.7
+    framework_agnostic: true
+    accessed: "2026-04-30"
+    notes: "Powers Trello, Jira, Confluence. Low-level, no sortable preset."
+
+  # Authentication
+  - id: iron-session
+    url: https://github.com/vvo/iron-session
+    topic: auth
+    library: "iron-session"
+    version: "8.0.1"
+    released: "2023-11-21"
+    session_type: stateless_cookie
+    nextjs_app_router: true
+    accessed: "2026-04-30"
+
+  - id: better-auth
+    url: https://www.better-auth.com/docs/integrations/next
+    topic: auth
+    library: "better-auth"
+    nextjs16_proxy_support: true
+    password_auth: true
+    session_type: cookie_or_database
+    accessed: "2026-04-30"
+    notes: "Explicitly supports Next.js 16 proxy.ts. Best Next.js 16-aware library found."
+
+  - id: authjs
+    url: https://authjs.dev
+    topic: auth
+    library: "next-auth / @auth/nextjs"
+    accessed: "2026-04-30"
+    notes: "Transitioning to Better Auth Inc. branding. Overkill for single-admin personal site."
+
+  - id: jose
+    url: https://github.com/panva/jose
+    topic: auth
+    library: "jose"
+    edge_runtime: true
+    accessed: "2026-04-30"
+    notes: "JWT sign/verify. Used in official Next.js authentication docs."
+
+  # Next.js 16 Docs
+  - id: nextjs-mutating-data
+    url: https://nextjs.org/docs/app/getting-started/mutating-data
+    topic: server-actions
+    nextjs_version: "16.2.4"
+    last_updated: "2026-04-10"
+    accessed: "2026-04-30"
+
+  - id: nextjs-authentication
+    url: https://nextjs.org/docs/app/guides/authentication
+    topic: auth
+    nextjs_version: "16.2.4"
+    last_updated: "2026-04-10"
+    accessed: "2026-04-30"
+
+  - id: nextjs-proxy
+    url: https://nextjs.org/docs/app/api-reference/file-conventions/proxy
+    topic: security
+    nextjs_version: "16.2.4"
+    last_updated: "2026-04-10"
+    accessed: "2026-04-30"
+    notes: "middleware.ts deprecated in v16.0.0, renamed to proxy.ts."
+
+  # React 19
+  - id: react19-blog
+    url: https://react.dev/blog/2024/12/05/react-19
+    topic: react19-features
+    accessed: "2026-04-30"
+
+  - id: react-useOptimistic
+    url: https://react.dev/reference/react/useOptimistic
+    topic: optimistic-ui
+    hook: useOptimistic
+    accessed: "2026-04-30"
+
+  - id: react-useActionState
+    url: https://react.dev/reference/react/useActionState
+    topic: server-actions
+    hook: useActionState
+    accessed: "2026-04-30"
+
+  # Persistence
+  - id: better-sqlite3
+    url: https://github.com/WiseLibs/better-sqlite3
+    topic: persistence
+    library: "better-sqlite3"
+    version: "12.9.0"
+    released: "2026-04-12"
+    api: synchronous
+    perf_vs_sqlite3: "11.7x faster single row reads"
+    serverless_caveat: "Needs persistent filesystem — does NOT work on Vercel serverless"
+    accessed: "2026-04-30"
+
+  - id: turso
+    url: https://turso.tech
+    topic: persistence
+    service: "Turso (libSQL)"
+    client: "@libsql/client"
+    connection: "HTTP REST (serverless-safe)"
+    github_stars: 18000
+    vercel_marketplace: true
+    accessed: "2026-04-30"
+
+  - id: upstash-redis
+    url: https://upstash.com
+    topic: persistence
+    service: "Upstash Redis"
+    connection: "HTTP REST (serverless-safe)"
+    free_tier:
+      commands_per_month: 500000
+      storage_mb: 256
+    pay_as_you_go: "$0.20 per 100K commands"
+    vercel_marketplace: true
+    notes: "Vercel KV was migrated to Upstash Redis in December 2024."
+    accessed: "2026-04-30"
+
+  # TanStack Query
+  - id: tanstack-query-v5
+    url: https://tanstack.com/query/v5/docs/framework/react/overview
+    topic: optimistic-ui
+    library: "@tanstack/react-query"
+    version: "v5.x"
+    react19_compatible: true
+    accessed: "2026-04-30"
+    notes: "Optimistic updates via variables (simple) or cache manipulation (complex). Likely overkill for this project."
+
+  # Drizzle ORM
+  - id: drizzle-sqlite
+    url: https://orm.drizzle.team/docs/get-started/sqlite-existing
+    topic: persistence
+    library: "drizzle-orm"
+    driver: "@libsql/client"
+    accessed: "2026-04-30"
+    notes: "Recommended ORM layer for both better-sqlite3 and libSQL/Turso."

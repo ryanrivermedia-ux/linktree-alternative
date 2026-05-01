@@ -1,0 +1,94 @@
+prd: admin-dashboard
+generated: "2026-04-30"
+
+waves:
+  - wave: 1
+    name: Foundation
+    description: "Architecture, auth, DB, and server actions. No UI. Must be fully merged before Wave 2."
+    gate: "bun run build passes. /admin returns 401 without session. /login returns 200. Turso read/write verified."
+    tasks: [T001, T002, T003, T004, T005, T006, T007, T008, T009, T010, T011, T012]
+    parallel_groups:
+      - group: 1
+        tasks: [T001]
+        note: "Manual prerequisite — user completes before running Wave 1"
+      - group: 2
+        tasks: [T002]
+        note: "Architecture change — unblocks everything"
+      - group: 3
+        tasks: [T003]
+        note: "Type extensions — depends on build working"
+      - group: 4
+        tasks: [T004, T006]
+        note: "DB setup and auth layer — parallel, both depend on T002"
+      - group: 5
+        tasks: [T005]
+        note: "Migration + seed — depends on T004"
+      - group: 6
+        tasks: [T007, T008]
+        note: "proxy.ts and login page — depend on T006"
+      - group: 7
+        tasks: [T009, T010, T011, T012]
+        note: "Server actions — all parallel, depend on T005 + T006"
+
+  - wave: 2
+    name: Admin UI
+    description: "Admin shell, shared components, and four content section pages."
+    gate: "All 4 sections render. Drag reorder, toggle, and drawer edits persist to DB."
+    tasks: [T013, T014, T015, T016, T017, T018]
+    parallel_groups:
+      - group: 1
+        tasks: [T013]
+        note: "Admin shell — must exist before section pages"
+      - group: 2
+        tasks: [T014]
+        note: "Shared components — depends on T013"
+      - group: 3
+        tasks: [T015, T016, T017, T018]
+        note: "Section pages — all parallel, depend on T014 + respective server actions"
+
+  - wave: 3
+    name: Preview + Cutover
+    description: "Live CRT preview pane and public page data cutover to Turso."
+    gate: "Preview updates optimistically. Public page reads from Turso. build passes."
+    tasks: [T019, T020]
+    parallel_groups:
+      - group: 1
+        tasks: [T019]
+        note: "Preview pane — depends on all Wave 2 sections"
+      - group: 2
+        tasks: [T020]
+        note: "Public cutover — depends on T019 (DB proven stable)"
+
+dependency_graph:
+  T001: []
+  T002: [T001]
+  T003: [T002]
+  T004: [T002]
+  T005: [T004]
+  T006: [T002]
+  T007: [T006]
+  T008: [T006, T007]
+  T009: [T005, T006]
+  T010: [T005, T006]
+  T011: [T005, T006]
+  T012: [T005, T006]
+  T013: [T007, T008]
+  T014: [T013]
+  T015: [T009, T014]
+  T016: [T010, T014]
+  T017: [T011, T014]
+  T018: [T012, T014]
+  T019: [T015, T016, T017, T018]
+  T020: [T019]
+
+longest_chain: "T001 → T002 → T006 → T007 → T008 → T013 → T014 → T015 → T019 → T020"
+chain_length: 10
+
+summary:
+  total_tasks: 20
+  complexity_points: 58
+  wave_1_tasks: 12
+  wave_2_tasks: 6
+  wave_3_tasks: 2
+  manual_tasks: 1
+  ready_tasks_no_deps: 1  # T001 only

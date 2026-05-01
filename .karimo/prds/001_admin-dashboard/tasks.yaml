@@ -1,0 +1,430 @@
+prd: admin-dashboard
+version: "1.0"
+created: "2026-04-30"
+
+tasks:
+  # ─────────────────────────────────────────────
+  # WAVE 1 — FOUNDATION
+  # ─────────────────────────────────────────────
+
+  - id: T001
+    title: "Prerequisite setup guide"
+    wave: 1
+    priority: must
+    complexity: 1
+    type: documentation
+    manual: true
+    depends_on: []
+    description: >
+      Write a setup checklist (not automated) covering: create Turso account +
+      database, create Vercel project linked to repo, set env vars
+      (SESSION_SECRET, ADMIN_PASSWORD_HASH, TURSO_DATABASE_URL, TURSO_AUTH_TOKEN)
+      in Vercel dashboard and local .env.local. User completes this before Wave 1 runs.
+    files_affected:
+      - ".karimo/prds/001_admin-dashboard/SETUP.md"
+    acceptance:
+      - SETUP.md exists with step-by-step instructions for all 4 env vars
+      - Commands included for generating SESSION_SECRET and ADMIN_PASSWORD_HASH
+
+  - id: T002
+    title: "Remove static export, configure Vercel deployment"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: config
+    depends_on: [T001]
+    description: >
+      Remove `output: "export"` from next.config.ts. Add Vercel-compatible
+      config (no trailingSlash, no distDir: out). Verify `bun run build` passes.
+      Note: next.config.ts is in require_review boundaries — PR required.
+    files_affected:
+      - "next.config.ts"
+    acceptance:
+      - "`output: 'export'` line removed"
+      - "`bun run build` passes without errors"
+      - "No static HTML output in /out directory"
+
+  - id: T003
+    title: "Extend TypeScript types with visible + order fields"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: types
+    depends_on: [T002]
+    description: >
+      Add `visible: boolean` and `order: number` to SocialLink, Resource, Tool,
+      and NavItem interfaces in src/config/site.config.ts. Add defaults to all
+      existing data entries (visible: true, order: array index). Public page
+      continues reading from site.config.ts — existing behavior unchanged.
+    files_affected:
+      - "src/config/site.config.ts"
+    acceptance:
+      - "All 4 interfaces have visible and order fields"
+      - "All existing data entries have visible: true and order set to their index"
+      - "`bun run build` passes"
+      - "Public page renders identically to before"
+
+  - id: T004
+    title: "Set up Turso + @libsql/client + Drizzle ORM schema"
+    wave: 1
+    priority: must
+    complexity: 3
+    type: infrastructure
+    depends_on: [T003]
+    description: >
+      Install @libsql/client, drizzle-orm, drizzle-kit. Create
+      src/lib/db/schema.ts with 4 tables: social_links, resources, tools,
+      nav_items. Each table mirrors the TypeScript interface fields plus
+      visible (integer 0/1) and order (integer). Create drizzle.config.ts.
+    files_affected:
+      - "package.json"
+      - "src/lib/db/schema.ts"
+      - "src/lib/db/client.ts"
+      - "drizzle.config.ts"
+    acceptance:
+      - "Schema compiles with no TypeScript errors"
+      - "drizzle-kit generate runs without errors"
+      - "DB client connects to Turso using env vars"
+
+  - id: T005
+    title: "Run initial DB migration + seed from site.config.ts"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: data
+    depends_on: [T004]
+    description: >
+      Run drizzle-kit migrate to create tables in Turso. Write a one-time seed
+      script (src/lib/db/seed.ts) that reads all data from site.config.ts and
+      inserts into Turso. Run seed. Verify all records readable via @libsql/client.
+    files_affected:
+      - "src/lib/db/seed.ts"
+    acceptance:
+      - "All 4 tables created in Turso"
+      - "Seed inserts all existing SocialLinks, Resources, Tools, NavItems"
+      - "Query returns correct record counts matching site.config.ts"
+
+  - id: T006
+    title: "Auth layer — iron-session + verifySession DAL"
+    wave: 1
+    priority: must
+    complexity: 3
+    type: security
+    depends_on: [T002]
+    description: >
+      Install iron-session, bcryptjs. Create src/lib/auth/session.ts (session
+      config, getSession, createSession, deleteSession). Create
+      src/lib/auth/dal.ts with verifySession() — reads session cookie, validates,
+      returns session or throws. SESSION_SECRET from env. ADMIN_PASSWORD_HASH
+      from env (bcrypt hash).
+    files_affected:
+      - "src/lib/auth/session.ts"
+      - "src/lib/auth/dal.ts"
+      - "package.json"
+    acceptance:
+      - "verifySession() throws if no valid session cookie"
+      - "createSession() sets encrypted cookie"
+      - "deleteSession() clears cookie"
+      - "No session data stored in DB"
+
+  - id: T007
+    title: "proxy.ts — protect /admin/* routes"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: security
+    depends_on: [T006]
+    description: >
+      Create proxy.ts (Next.js 16 — not middleware.ts). Function named proxy().
+      Checks session cookie on all /admin/* paths. Redirects to /login if
+      missing or invalid. No DB calls in proxy — cookie check only. Configure
+      matcher to cover /admin/:path*.
+    files_affected:
+      - "proxy.ts"
+    acceptance:
+      - "GET /admin without session cookie → 307 redirect to /login"
+      - "GET /admin with valid session cookie → 200"
+      - "Proxy function named `proxy()`, not `middleware()`"
+      - "No DB or async calls in proxy body"
+
+  - id: T008
+    title: "/login page + login server action"
+    wave: 1
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T006, T007]
+    description: >
+      Create src/app/login/page.tsx — password input form, submits to login
+      server action. Server action: validates password with bcrypt.compare()
+      against ADMIN_PASSWORD_HASH env var, calls createSession() on match,
+      redirects to /admin. Invalid password returns error state via
+      useActionState. Styled with existing Tailwind tokens and dark mode.
+    files_affected:
+      - "src/app/login/page.tsx"
+      - "src/app/actions/auth.ts"
+    acceptance:
+      - "Correct password → session cookie set → redirect to /admin"
+      - "Wrong password → error message displayed, no redirect"
+      - "verifySession() called inside login action (not just proxy)"
+      - "Page renders correctly in dark mode"
+
+  - id: T009
+    title: "Server actions — SocialLink (full CRUD + reorder + toggle)"
+    wave: 1
+    priority: must
+    complexity: 4
+    type: feature
+    depends_on: [T005, T006]
+    description: >
+      Create src/app/actions/social-links.ts. Actions: createSocialLink,
+      updateSocialLink, deleteSocialLink, reorderSocialLinks (accepts ordered
+      id array, bulk update in single transaction), toggleSocialLink. Each
+      action calls verifySession() first. Input validated with Zod. Calls
+      revalidatePath('/') and revalidatePath('/admin') after mutations.
+    files_affected:
+      - "src/app/actions/social-links.ts"
+    acceptance:
+      - "All 5 actions call verifySession() as first line"
+      - "All inputs validated with Zod before DB write"
+      - "Reorder uses single bulk transaction"
+      - "revalidatePath called after every mutation"
+      - "Returns typed error state on failure (not throw)"
+
+  - id: T010
+    title: "Server actions — NavItem (full CRUD + reorder + toggle)"
+    wave: 1
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T005, T006]
+    description: >
+      Create src/app/actions/nav-items.ts. Same pattern as T009:
+      createNavItem, updateNavItem, deleteNavItem, reorderNavItems,
+      toggleNavItem. verifySession(), Zod validation, revalidatePath.
+    files_affected:
+      - "src/app/actions/nav-items.ts"
+    acceptance:
+      - "Same acceptance criteria as T009"
+
+  - id: T011
+    title: "Server actions — Resource (edit + reorder + toggle, no create/delete)"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: feature
+    depends_on: [T005, T006]
+    description: >
+      Create src/app/actions/resources.ts. Actions: updateResource,
+      reorderResources, toggleResource. No create or delete. verifySession(),
+      Zod, revalidatePath.
+    files_affected:
+      - "src/app/actions/resources.ts"
+    acceptance:
+      - "No createResource or deleteResource actions"
+      - "verifySession(), Zod, revalidatePath on all 3 actions"
+
+  - id: T012
+    title: "Server actions — Tool (edit + reorder + toggle, no create/delete)"
+    wave: 1
+    priority: must
+    complexity: 2
+    type: feature
+    depends_on: [T005, T006]
+    description: >
+      Create src/app/actions/tools.ts. Actions: updateTool, reorderTools,
+      toggleTool. No create or delete. verifySession(), Zod, revalidatePath.
+      Tool has tags (JSON array) — Zod schema must handle array field.
+    files_affected:
+      - "src/app/actions/tools.ts"
+    acceptance:
+      - "No createTool or deleteTool actions"
+      - "tags field validated as array of {label, bg, text} objects"
+      - "verifySession(), Zod, revalidatePath on all 3 actions"
+
+  # ─────────────────────────────────────────────
+  # WAVE 2 — ADMIN UI
+  # ─────────────────────────────────────────────
+
+  - id: T013
+    title: "Admin layout + shell"
+    wave: 2
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T007, T008]
+    description: >
+      Create src/app/admin/layout.tsx — wraps all admin pages. Includes:
+      section nav (SocialLinks | Resources | Tools | NavItems), logout button
+      (calls deleteSession + redirect to /login), responsive layout shell.
+      Create src/app/admin/page.tsx as the main admin page. Styled with
+      existing Tailwind tokens and dark mode.
+    files_affected:
+      - "src/app/admin/layout.tsx"
+      - "src/app/admin/page.tsx"
+    acceptance:
+      - "Admin shell renders with all 4 section tabs"
+      - "Logout clears session and redirects to /login"
+      - "Dark mode renders correctly"
+      - "Route is inaccessible without valid session"
+
+  - id: T014
+    title: "Shared admin UI components — SortableList, DragHandle, ToggleSwitch, ItemDrawer"
+    wave: 2
+    priority: must
+    complexity: 5
+    type: feature
+    depends_on: [T013]
+    description: >
+      Build shared components in src/components/admin/:
+      - SortableList.tsx: wraps @dnd-kit/core DndContext + SortableContext,
+        verticalListSortingStrategy, closestCenter, fires onReorder callback
+      - DragHandle.tsx: drag grip icon, useSortable hook trigger
+      - ToggleSwitch.tsx: accessible checkbox styled as toggle, fires onToggle
+      - ItemDrawer.tsx: slide-over drawer (Framer Motion, spring animation,
+        ESC close, focus trap), accepts title + form children + onSave + onClose
+      Install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities.
+    files_affected:
+      - "src/components/admin/SortableList.tsx"
+      - "src/components/admin/DragHandle.tsx"
+      - "src/components/admin/ToggleSwitch.tsx"
+      - "src/components/admin/ItemDrawer.tsx"
+      - "package.json"
+    acceptance:
+      - "SortableList fires onReorder with new ordered id array after drag"
+      - "ToggleSwitch is keyboard accessible (Space to toggle)"
+      - "ItemDrawer: ESC closes, focus trapped inside when open, spring animation"
+      - "All components use existing CSS token system (no hardcoded colors)"
+
+  - id: T015
+    title: "SocialLinks admin section"
+    wave: 2
+    priority: must
+    complexity: 4
+    type: feature
+    depends_on: [T009, T014]
+    description: >
+      Create src/app/admin/social-links/page.tsx. Loads SocialLinks from Turso
+      via server component. Client component wraps SortableList with each link
+      as a row: DragHandle + platform name + handle + URL + ToggleSwitch + Edit
+      button. Edit button opens ItemDrawer with form (platform, title, handle,
+      url, icon). "Add Link" button opens drawer in create mode. Delete button
+      inside drawer with confirmation. All mutations call server actions from T009.
+      useOptimistic for toggle and reorder. useActionState for drawer form.
+    files_affected:
+      - "src/app/admin/social-links/page.tsx"
+    acceptance:
+      - "List renders all SocialLinks from Turso"
+      - "Drag reorder updates order in DB via reorderSocialLinks action"
+      - "Toggle updates visible in DB, preview updates immediately"
+      - "Drawer create mode calls createSocialLink, edit mode calls updateSocialLink"
+      - "Delete inside drawer calls deleteSocialLink with confirmation"
+      - "Optimistic updates revert correctly on server error"
+
+  - id: T016
+    title: "NavItems admin section"
+    wave: 2
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T010, T014]
+    description: >
+      Create src/app/admin/nav-items/page.tsx. Same pattern as T015.
+      Rows: DragHandle + label + href + ToggleSwitch + Edit. Drawer fields:
+      label, href. Create and Delete supported. Actions from T010.
+    files_affected:
+      - "src/app/admin/nav-items/page.tsx"
+    acceptance:
+      - "Same acceptance pattern as T015 for NavItems"
+
+  - id: T017
+    title: "Resources admin section"
+    wave: 2
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T011, T014]
+    description: >
+      Create src/app/admin/resources/page.tsx. Rows: DragHandle + title +
+      badge + ToggleSwitch + Edit. Drawer fields: title, description, badge
+      (live|coming-soon select), link, buttonLabel. No create or delete buttons.
+      Actions from T011.
+    files_affected:
+      - "src/app/admin/resources/page.tsx"
+    acceptance:
+      - "No Add or Delete UI present for Resources"
+      - "Drawer edit, toggle, reorder all persist to DB"
+
+  - id: T018
+    title: "Tools admin section"
+    wave: 2
+    priority: must
+    complexity: 3
+    type: feature
+    depends_on: [T012, T014]
+    description: >
+      Create src/app/admin/tools/page.tsx. Rows: DragHandle + name + icon path
+      + ToggleSwitch + Edit. Drawer fields: name, icon (string), url,
+      description, smallIcon (checkbox). Tags displayed as read-only badges
+      (no tag editing UI). No create or delete buttons. Actions from T012.
+    files_affected:
+      - "src/app/admin/tools/page.tsx"
+    acceptance:
+      - "Tags displayed as read-only chips in drawer"
+      - "No Add or Delete UI present for Tools"
+      - "Drawer edit, toggle, reorder all persist to DB"
+
+  # ─────────────────────────────────────────────
+  # WAVE 3 — PREVIEW + PUBLIC CUTOVER
+  # ─────────────────────────────────────────────
+
+  - id: T019
+    title: "Live preview pane — CRT effects, phone frame, optimistic state"
+    wave: 3
+    priority: must
+    complexity: 5
+    type: feature
+    depends_on: [T015, T016, T017, T018]
+    description: >
+      Add a live preview pane to the admin layout. Phone frame mockup at 390px
+      width. Composes FaultyTerminal (read-only — no modifications to
+      FaultyTerminal.tsx or FaultyTerminal.css) with the public page's React
+      components to render a faithful preview. Driven by the same optimistic
+      state arrays already in the admin sections — no additional state layer.
+      Admin layout switches to split-pane: grid-cols-[1fr_420px] on desktop,
+      stacked tabs (Editor | Preview) on mobile.
+    files_affected:
+      - "src/components/admin/PreviewPane.tsx"
+      - "src/app/admin/layout.tsx"
+    acceptance:
+      - "Preview updates on every drag, toggle, and drawer save — before server confirms"
+      - "FaultyTerminal.tsx and FaultyTerminal.css not modified"
+      - "CRT scanline effect renders inside phone frame"
+      - "Mobile: tabs switch between editor and preview"
+      - "Desktop: split-pane, both visible simultaneously"
+
+  - id: T020
+    title: "Public page data cutover — read from Turso instead of site.config.ts"
+    wave: 3
+    priority: must
+    complexity: 3
+    type: refactor
+    depends_on: [T019]
+    description: >
+      Replace static site.config.ts imports in all public page components with
+      Turso reads (server components, cached with next/cache). Filter out items
+      where visible=false. Respect order field for rendering sequence.
+      site.config.ts remains in codebase as fallback reference but is no longer
+      the data source for the public page.
+    files_affected:
+      - "src/app/page.tsx"
+      - "src/components/OurLinks.tsx"
+      - "src/components/FreeResources.tsx"
+      - "src/components/CardNav.tsx"
+    acceptance:
+      - "Public page renders identical output to before cutover (all items visible=true)"
+      - "Items with visible=false do not appear on public page"
+      - "Item order matches Turso order field"
+      - "site.config.ts no longer imported in any public-facing component"
+      - "`bun run build` passes"
+      - "Public page still loads with no session cookie"
