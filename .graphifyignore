@@ -1,0 +1,30 @@
+# graphify exclusions — keep the graph focused on source, not artifacts/binaries
+graphify-out/
+
+# Build / dependency outputs
+build/
+Builds/
+dist/
+out/
+.next/
+.turbo/
+coverage/
+node_modules/
+.venv/
+venv/
+__pycache__/
+DerivedData/
+.build/
+JuceLibraryCode/
+*.o
+*.obj
+
+# Audio & media (Aerospace Audio / JUCE sample libraries)
+*.wav
+*.aif
+*.aiff
+*.flac
+*.mp3
+*.ogg
+*.mp4
+*.mov
